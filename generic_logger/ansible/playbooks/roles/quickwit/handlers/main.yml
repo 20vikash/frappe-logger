@@ -1,0 +1,10 @@
+---
+# handlers file for quickwit
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Restart quickwit
+  systemd:
+    name: "{{ quickwit_service_name }}.service"
+    state: restarted

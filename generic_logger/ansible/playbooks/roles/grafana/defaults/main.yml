@@ -1,0 +1,9 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for grafana
+grafana_image: docker.io/grafana/grafana-oss:latest
+grafana_port: 3000
+grafana_service_name: grafana
+grafana_data_dir: /var/lib/grafana
+grafana_config_dir: /etc/grafana
+grafana_quadlet_dir: /etc/containers/systemd

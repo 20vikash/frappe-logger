@@ -1,0 +1,17 @@
+version: 0.7
+
+node_id: quickwit-node
+listen_address: 0.0.0.0
+
+default_index_root_uri: s3://{{ S3_BUCKET }}/indexes
+metastore_uri: s3://{{ S3_BUCKET }}/metastore
+
+storage:
+  s3:
+    region: "{{ S3_REGION }}"
+    access_key_id: "{{ ACCESS_TOKEN }}"
+    secret_access_key: "{{ SECRET_KEY }}"
+    endpoint: "https://{{ S3_ENDPOINT }}"
+    force_path_style_access: true
+    disable_multi_object_delete: false
+    disable_multipart_upload: false

@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: quickwit-quickwit-datasource
+    type: quickwit-quickwit-datasource
+    access: proxy
+    url: {{ quickwit_url }}
+    isDefault: true
+    editable: true
+
+    jsonData:
+      index: {{ quickwit_index }}
+      logLevelField: ""
+      logMessageField: ""
+      oauthPassThru: true
+      pdcInjected: false

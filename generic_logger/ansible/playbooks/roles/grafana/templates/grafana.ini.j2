@@ -1,0 +1,24 @@
+[server]
+domain = {{ grafana_domain }}
+root_url = {{ grafana_root_url }}
+
+[users]
+allow_sign_up = false
+
+[auth]
+disable_login_form = false
+oauth_auto_login = false
+
+[auth.generic_oauth]
+enabled = true
+name = Frappe
+allow_sign_up = true
+client_id = {{ grafana_oauth_client_id }}
+client_secret = {{ grafana_oauth_client_secret }}
+scopes = openid profile email
+auth_url = {{ grafana_oauth_auth_url }}
+token_url = {{ grafana_oauth_token_url }}
+api_url = {{ grafana_oauth_api_url }}
+use_pkce = false
+use_refresh_token = false
+send_client_credentials_via_post = true

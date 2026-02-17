@@ -1,0 +1,90 @@
+{
+ "actions": [
+  {
+   "action": "generic_logger.api.test_index_api",
+   "action_type": "Server Action",
+   "label": "Create"
+  },
+  {
+   "action": "generic_logger.api.delete_index",
+   "action_type": "Server Action",
+   "label": "Delete"
+  }
+ ],
+ "allow_rename": 1,
+ "autoname": "prompt",
+ "creation": "2026-02-11 09:22:53.310614",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "amended_from",
+  "schema",
+  "quickwit_server",
+  "created"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "QuickWit Index",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "schema",
+   "fieldtype": "JSON",
+   "in_list_view": 1,
+   "label": "Schema",
+   "reqd": 1
+  },
+  {
+   "fieldname": "quickwit_server",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "QuickWit Server",
+   "options": "QuickWit Server",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "created",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Created",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-02-15 14:40:35.805271",
+ "modified_by": "Administrator",
+ "module": "Generic Logger",
+ "name": "QuickWit Index",
+ "naming_rule": "Set by user",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=Grafana Monitoring Dashboard
+After=network.target
+
+[Container]
+Image={{ grafana_image }}
+ContainerName=grafana
+
+Volume={{ grafana_data_dir }}:/var/lib/grafana:Z
+Volume={{ grafana_config_dir }}/grafana.ini:/etc/grafana/grafana.ini:Z
+Volume={{ grafana_config_dir }}/provisioning:/etc/grafana/provisioning:Z
+
+PublishPort={{ grafana_port }}:3000
+
+Environment=GF_INSTALL_PLUGINS=https://github.com/quickwit-oss/quickwit-datasource/releases/download/v0.3.1/quickwit-quickwit-datasource-0.3.1.zip;quickwit-quickwit-datasource
+
+[Service]
+Restart=always
+TimeoutStopSec=70
+
+[Install]
+WantedBy=multi-user.target

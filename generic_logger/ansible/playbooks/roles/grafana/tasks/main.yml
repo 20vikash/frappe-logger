@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: MIT-0
+---
+# tasks file for grafana
+
+- name: Ensure grafana data directory exists
+  file:
+    path: "{{ grafana_data_dir }}"
+    state: directory
+    owner: 472
+    group: 472
+    mode: 0755
+
+- name: Ensure grafana config directory exists
+  file:
+    path: "{{ grafana_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Generate grafana OAuth config
+  template:
+    src: grafana.ini.j2
+    dest: "{{ grafana_config_dir }}/grafana.ini"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart grafana
+
+- name: Ensure grafana provisioning directory exists
+  file:
+    path: "{{ grafana_config_dir }}/provisioning/datasources"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Provision Quickwit datasource
+  template:
+    src: quickwit.yaml.j2
+    dest: "{{ grafana_config_dir }}/provisioning/datasources/quickwit.yaml"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart grafana
+
+- name: Install grafana quadlet container unit
+  template:
+    src: grafana.container.j2
+    dest: "{{ grafana_quadlet_dir }}/grafana.container"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - Reload systemd
+    - Restart grafana
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable grafana service
+  systemd:
+    name: "{{ grafana_service_name }}.service"
+    enabled: yes
+
+- name: Start grafana service
+  systemd:
+    name: "{{ grafana_service_name }}.service"
+    state: started

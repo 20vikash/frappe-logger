@@ -1,0 +1,39 @@
+---
+# tasks file for quickwit
+- name: Ensure config directory exists
+  file:
+    path: "{{ quickwit_config_dir }}"
+    state: directory
+    mode: 0755
+
+- name: Generate quickwit config
+  template:
+    src: config.yaml.j2
+    dest: "{{ quickwit_config_dir }}/config.yaml"
+    owner: root
+    group: root
+    mode: 0600
+  notify: Restart quickwit
+
+- name: Install quadlet container unit
+  template:
+    src: quickwit.container.j2
+    dest: "{{ quickwit_quadlet_dir }}/quickwit.container"
+    owner: root
+    group: root
+    mode: 0644
+  notify: Reload systemd
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Enable quickwit service
+  systemd:
+    name: "{{ quickwit_service_name }}.service"
+    enabled: yes
+
+- name: Start quickwit service
+  systemd:
+    name: "{{ quickwit_service_name }}.service"
+    state: started

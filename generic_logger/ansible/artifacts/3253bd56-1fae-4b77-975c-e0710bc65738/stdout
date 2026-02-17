@@ -1,0 +1,8 @@
+
+PLAY [Bootstrap the server] ****************************************************
+
+TASK [Gathering Facts] *********************************************************
+[1;31mfatal: [inventory/production.ini]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: Could not resolve hostname inventory/production.ini: Name or service not known", "unreachable": true}[0m
+
+PLAY RECAP *********************************************************************
+[0;31minventory/production.ini[0m   : ok=0    changed=0    [1;31munreachable=1   [0m failed=0    skipped=0    rescued=0    ignored=0   

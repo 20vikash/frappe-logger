@@ -1,0 +1,16 @@
+[Unit]
+Description=Quickwit Search Engine
+After=network.target
+
+[Container]
+Image={{ quickwit_image }}
+Volume={{ quickwit_config_dir }}:/quickwit/config:Z
+Exec=run --config /quickwit/config/config.yaml
+PublishPort={{ quickwit_port }}:{{ quickwit_port }}
+
+[Service]
+Restart=always
+TimeoutStopSec=70
+
+[Install]
+WantedBy=multi-user.target
