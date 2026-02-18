@@ -1,5 +1,5 @@
 # ---------- Stage 1: Build Proxy ----------
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 COPY proxy/go.mod proxy/go.sum ./
