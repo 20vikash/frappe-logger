@@ -9,7 +9,7 @@ COPY proxy/ .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o proxy
 
 # ---------- Stage 2: Final Image ----------
-FROM quickwit/quickwit:latest
+FROM docker.io/quickwit/quickwit:qw-fulmicoton-lambda
 
 WORKDIR /quickwit/config
 
