@@ -4,9 +4,8 @@ After=network.target
 
 [Container]
 Image={{ quickwit_image }}
-Volume={{ quickwit_config_dir }}:/quickwit/config:Z
-Exec=run --config /quickwit/config/config.yaml
-PublishPort={{ quickwit_port }}:{{ quickwit_port }}
+Volume={{ quickwit_config_dir }}/config.yaml:/quickwit/config/config.yaml:Z
+PublishPort=8080:8080
 
 [Service]
 Restart=always
