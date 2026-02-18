@@ -4,6 +4,7 @@ After=network.target
 
 [Container]
 Image={{ quickwit_image }}
+Pull=always
 Volume={{ quickwit_config_dir }}/config.yaml:/quickwit/config/config.yaml:Z
 PublishPort=8080:8080
 

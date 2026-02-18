@@ -22,4 +22,4 @@ RUN chmod +x /quickwit/config/start.sh
 
 EXPOSE 8080
 
-CMD ["/quickwit/config/start.sh"]
+ENTRYPOINT ["/quickwit/config/start.sh"]
