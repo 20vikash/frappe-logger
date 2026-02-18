@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -27,20 +28,46 @@ func rewriteMsearchBody(rawBody []byte) []byte {
 		return rawBody
 	}
 
-	query := queryObj["query"].(map[string]any)
-	boolQuery := query["bool"].(map[string]any)
-	filters := boolQuery["filter"].([]any)
+	query, ok := queryObj["query"].(map[string]any)
+	if !ok {
+		return rawBody
+	}
+
+	boolQuery, ok := query["bool"].(map[string]any)
+	if !ok {
+		return rawBody
+	}
+
+	filters, ok := boolQuery["filter"].([]any)
+	if !ok {
+		return rawBody
+	}
 
 	for _, f := range filters {
-		filterMap := f.(map[string]any)
+		filterMap, ok := f.(map[string]any)
+		if !ok {
+			continue
+		}
+
 		if qs, exists := filterMap["query_string"]; exists {
-			qsMap := qs.(map[string]any)
-			queryStr := qsMap["query"].(string)
+			qsMap, ok := qs.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			queryStr, ok := qsMap["query"].(string)
+			if !ok {
+				continue
+			}
+
 			qsMap["query"] = "(" + queryStr + ") AND (container_id:x)"
 		}
 	}
 
-	modifiedQuery, _ := json.Marshal(queryObj)
+	modifiedQuery, err := json.Marshal(queryObj)
+	if err != nil {
+		return rawBody
+	}
 
 	return bytes.Join([][]byte{
 		meta,
@@ -50,36 +77,41 @@ func rewriteMsearchBody(rawBody []byte) []byte {
 }
 
 func main() {
-	target, _ := url.Parse(QUICKWIT_BASE_URL)
-
-	proxy := httputil.NewSingleHostReverseProxy(target)
-
-	// Customize transport (timeout)
-	proxy.Transport = &http.Transport{
-		ResponseHeaderTimeout: 5 * time.Second,
+	target, err := url.Parse(QUICKWIT_BASE_URL)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	proxy.ModifyResponse = nil
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			// Set backend target
+			pr.SetURL(target)
 
-	originalDirector := proxy.Rewrite
+			// Only rewrite POST requests
+			if pr.In.Method != http.MethodPost {
+				return
+			}
 
-	proxy.Rewrite = func(req *httputil.ProxyRequest) {
-		originalDirector(req)
+			// Read original request body
+			bodyBytes, err := io.ReadAll(pr.In.Body)
+			if err != nil {
+				return
+			}
+			pr.In.Body.Close()
 
-		// Read body
-		bodyBytes, err := io.ReadAll(req.Out.Body)
-		if err != nil {
-			return
-		}
+			// Rewrite body
+			updatedBody := rewriteMsearchBody(bodyBytes)
 
-		req.Out.Body.Close()
-
-		updatedBody := rewriteMsearchBody(bodyBytes)
-
-		req.Out.Body = io.NopCloser(bytes.NewReader(updatedBody))
-		req.Out.ContentLength = int64(len(updatedBody))
+			// Replace outgoing body
+			pr.Out.Body = io.NopCloser(bytes.NewReader(updatedBody))
+			pr.Out.ContentLength = int64(len(updatedBody))
+			pr.Out.Header.Set("Content-Length", strconv.Itoa(len(updatedBody)))
+		},
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 5 * time.Second,
+		},
 	}
 
-	log.Println("Enterprise Proxy running on :8080")
+	log.Println("proxy running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", proxy))
 }
