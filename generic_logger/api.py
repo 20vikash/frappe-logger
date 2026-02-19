@@ -1,10 +1,6 @@
 import frappe
-# from press_agent_manager.infrastructure.doctype.virtual_machine.virtual_machine import VirtualMachine
-import ansible_runner
 import requests
 import json
-
-from frappe.utils import cstr
 
 @frappe.whitelist()
 def test_standalone(*args,**kwargs):
@@ -29,7 +25,7 @@ def test_standalone(*args,**kwargs):
     endpoint_url = doc.endpoint_url
     region = doc.region
 
-    # vm = frappe.get_doc("Virtual Machine", doc.virtual_machine)
+    vm = frappe.get_doc("Virtual Machine", doc.virtual_machine)
 
     variables = {
         "S3_REGION": region,
@@ -40,33 +36,10 @@ def test_standalone(*args,**kwargs):
         "quickwit_config_dir": "/etc/quickwit"
     }
 
-    app_path = frappe.get_app_path("generic_logger")
+    vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/bootstrap.yml", run_in_background=True, variables=variables)
+    play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/quickwit.yml", run_in_background=True, variables=variables)
 
-    bootstrap_path = "{}/ansible/playbooks/bootstrap.yml".format(app_path)
-    inventory_path = "{}/ansible/inventory/production.ini".format(app_path)
-    quickwit_path = "{}/ansible/playbooks/quickwit.yml".format(app_path)
-
-    # Run bootstrap playbook to install podman and set up config dir
-    ansible_runner.run(
-        playbook=bootstrap_path,
-        inventory=inventory_path,
-        extravars=variables,
-        cmdline=f"--user=root",
-    )
-
-    # Run quickwit playbook to provision the quickwit server
-    ansible_runner.run(
-        playbook=quickwit_path,
-        inventory=inventory_path,
-        extravars=variables,
-        cmdline=f"--user=root",
-    )
-
-    # vm.run_ansible_play(app="generic_logger", playbook_path=playbook_path, run_in_background=True)
-
-    # frappe.enqueue("generic_logger.quickwit_server.provision.run_playbook", bootstrap_path=bootstrap_path, quickwit_path=quickwit_path, inventory_path=inventory_path, variables=variables, timeout=3600)
-    
-    return doc.get_quickwit_server()
+    frappe.msgprint(f"Created Ansible Play <a href='{play.get_url()}'>View Play</a>")
 
 @frappe.whitelist()
 def test_index_api(*args,**kwargs):
@@ -148,23 +121,15 @@ def provision_grafana(*args, **kwargs):
     doc = frappe.get_doc('Grafana Server', name)
 
     quickwit_index = frappe.get_doc("QuickWit Index", doc.quickwit_index)
-    # quickwit_server = frappe.get_doc("QuickWit Server", quickwit_index.quickwit_server)
-
-    app_path = frappe.get_app_path("generic_logger")
 
     vm = frappe.get_doc("Virtual Machine", doc.virtual_machine)
     grafana_host = vm.public_ip_address
 
-    # oidc_host = cstr(frappe.local.site)
-
     oAuth = frappe.get_doc("OAuth", doc.oauth)
+    oAuth_client = frappe.get_doc("OAuth Client", oAuth.oauth_client)
 
-    bootstrap_path = "{}/ansible/playbooks/bootstrap.yml".format(app_path)
-    inventory_path = "{}/ansible/inventory/production.ini".format(app_path)
-    grafana_path = "{}/ansible/playbooks/grafana.yml".format(app_path)
-
-    client_id = oAuth.get_password("client_id")
-    client_secret = oAuth.get_password("client_secret")
+    client_id = oAuth_client.client_id
+    client_secret = oAuth_client.client_secret
     admin_user = doc.admin_user
     admin_password = doc.admin_password
 
@@ -178,24 +143,11 @@ def provision_grafana(*args, **kwargs):
         "grafana_oauth_api_url": "http://{}:8000/api/method/frappe.integrations.oauth2.openid_profile".format("188.245.72.102"),
         "grafana_domain": "{}:3000".format(grafana_host),
         "grafana_root_url": "http://{}:3000".format(grafana_host),
-        "quickwit_url": "http://{}:7280/api/v1".format("188.245.72.65"),
+        "quickwit_url": "http://{}:8080/api/v1".format("188.245.72.65"),
         "quickwit_index": quickwit_index.name
     }
 
-    # Run bootstrap playbook to install podman and set up config dir
-    ansible_runner.run(
-        playbook=bootstrap_path,
-        inventory=inventory_path,
-        extravars=variables,
-        cmdline=f"--user=root",
-    )
+    vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/bootstrap.yml", run_in_background=True, variables=variables)
+    play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/grafana.yml", run_in_background=True, variables=variables)
 
-    # Run quickwit playbook to provision the quickwit server
-    ansible_runner.run(
-        playbook=grafana_path,
-        inventory=inventory_path,
-        extravars=variables,
-        cmdline=f"--user=root",
-    )
-
-    # return doc.get_grafana_server()
+    frappe.msgprint(f"Created Ansible Play <a href='{play.get_url()}'>View Play</a>")

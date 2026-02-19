@@ -6,38 +6,32 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "client_id",
-  "client_secret",
-  "virtual_machine"
+  "virtual_machine",
+  "oauth_client"
  ],
  "fields": [
   {
-   "fieldname": "client_id",
-   "fieldtype": "Password",
-   "in_list_view": 1,
-   "label": "Client ID",
-   "reqd": 1
-  },
-  {
-   "fieldname": "client_secret",
-   "fieldtype": "Password",
-   "in_list_view": 1,
-   "label": "Client Secret",
-   "reqd": 1
-  },
-  {
    "fieldname": "virtual_machine",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Virtual Machine",
    "options": "Virtual Machine",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "oauth_client",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "OAuth Client",
+   "options": "OAuth Client",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-16 11:32:17.908808",
+ "modified": "2026-02-19 11:57:13.915661",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "OAuth",

@@ -81,7 +81,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-12 14:50:06.677611",
+ "modified": "2026-02-19 10:32:24.565504",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",
@@ -105,5 +105,18 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [
+  {
+   "color": "Orange",
+   "title": "Pending"
+  },
+  {
+   "color": "Green",
+   "title": "Finished"
+  },
+  {
+   "color": "Red",
+   "title": "Failed"
+  }
+ ]
 }
