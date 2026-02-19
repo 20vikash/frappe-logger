@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -112,6 +114,20 @@ func main() {
 		},
 	}
 
+	// Block UI access
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		blockedPaths := []string{"/ui"}
+		for _, path := range blockedPaths {
+			if strings.Contains(r.URL.Path, path) {
+				http.Error(w, "Forbidden: Path is blocked", http.StatusForbidden)
+				fmt.Printf("Blocked access to: %s\n", r.URL.Path)
+				return
+			}
+		}
+
+		proxy.ServeHTTP(w, r)
+	})
+
 	log.Println("proxy running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", proxy))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
