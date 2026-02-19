@@ -25,7 +25,6 @@
     owner: root
     group: root
     mode: 0644
-  notify: Restart grafana
 
 - name: Ensure grafana provisioning directory exists
   file:
@@ -42,7 +41,6 @@
     owner: root
     group: root
     mode: 0644
-  notify: Restart grafana
 
 - name: Install grafana quadlet container unit
   template:
@@ -51,20 +49,14 @@
     owner: root
     group: root
     mode: 0644
-  notify:
-    - Reload systemd
-    - Restart grafana
-
-- name: Reload systemd
-  systemd:
-    daemon_reload: yes
+  notify: Reload systemd
 
 - name: Enable grafana service
   systemd:
     name: "{{ grafana_service_name }}.service"
     enabled: yes
 
-- name: Start grafana service
+- name: Restart grafana service
   systemd:
     name: "{{ grafana_service_name }}.service"
-    state: started
+    state: restarted

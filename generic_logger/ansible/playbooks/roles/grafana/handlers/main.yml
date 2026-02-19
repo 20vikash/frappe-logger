@@ -4,8 +4,3 @@
 - name: Reload systemd
   systemd:
     daemon_reload: yes
-
-- name: Restart grafana
-  systemd:
-    name: "{{ grafana_service_name }}.service"
-    state: restarted

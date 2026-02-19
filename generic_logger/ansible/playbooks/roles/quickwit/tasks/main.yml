@@ -13,7 +13,6 @@
     owner: root
     group: root
     mode: 0600
-  notify: Restart quickwit
 
 - name: Install quadlet container unit
   template:
@@ -29,7 +28,7 @@
     name: "{{ quickwit_service_name }}.service"
     enabled: yes
 
-- name: Start quickwit service
+- name: Restart quickwit service
   systemd:
     name: "{{ quickwit_service_name }}.service"
-    state: started
+    state: restarted
