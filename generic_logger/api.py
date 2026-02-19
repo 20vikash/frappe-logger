@@ -36,7 +36,7 @@ def test_standalone(*args,**kwargs):
         "quickwit_config_dir": "/etc/quickwit"
     }
 
-    vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/bootstrap.yml", run_in_background=True, variables=variables)
+    vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/bootstrap.yml", run_in_background=False, variables=variables)
     play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/quickwit.yml", run_in_background=True, variables=variables)
 
     frappe.msgprint(f"Created Ansible Play <a href='{play.get_url()}'>View Play</a>")
@@ -147,7 +147,7 @@ def provision_grafana(*args, **kwargs):
         "quickwit_index": quickwit_index.name
     }
 
-    vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/bootstrap.yml", run_in_background=True, variables=variables)
+    vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/bootstrap.yml", run_in_background=False, variables=variables)
     play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/grafana.yml", run_in_background=True, variables=variables)
 
     frappe.msgprint(f"Created Ansible Play <a href='{play.get_url()}'>View Play</a>")
