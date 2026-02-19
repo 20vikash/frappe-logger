@@ -12,7 +12,7 @@ Volume={{ grafana_config_dir }}/provisioning:/etc/grafana/provisioning:Z
 
 PublishPort={{ grafana_port }}:3000
 
-Environment=GF_INSTALL_PLUGINS=https://github.com/quickwit-oss/quickwit-datasource/releases/download/v0.3.1/quickwit-quickwit-datasource-0.3.1.zip;quickwit-quickwit-datasource
+Environment=GF_INSTALL_PLUGINS="quickwit-quickwit-datasource"
 
 [Service]
 Restart=always
