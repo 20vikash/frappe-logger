@@ -1,8 +1,2 @@
 ---
 # defaults file for quickwit
-quickwit_service_name: quickwit
-quickwit_image: ghcr.io/20vikash/frappe-logger:latest
-quickwit_port: 7280
-quickwit_data_dir: /var/lib/quickwit
-quickwit_config_dir: /etc/quickwit
-quickwit_quadlet_dir: /etc/containers/systemd

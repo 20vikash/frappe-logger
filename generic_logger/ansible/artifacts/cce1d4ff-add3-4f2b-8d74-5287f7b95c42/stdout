@@ -1,6 +1,0 @@
-[1;35m[WARNING]: Could not match supplied host pattern, ignoring: quickwit[0m
-
-PLAY [quickwit] ****************************************************************
-[0;36mskipping: no hosts matched[0m
-
-PLAY RECAP *********************************************************************

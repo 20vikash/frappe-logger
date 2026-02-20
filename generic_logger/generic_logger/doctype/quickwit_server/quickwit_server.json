@@ -1,25 +1,20 @@
 {
- "actions": [
-  {
-   "action": "generic_logger.api.test_standalone",
-   "action_type": "Server Action",
-   "label": "Provision"
-  }
- ],
+ "actions": [],
  "allow_rename": 1,
  "autoname": "prompt",
  "creation": "2026-02-10 11:38:51.985390",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "quickwit_details_section",
   "endpoint_url",
-  "s3_bucket",
+  "provisioned_at",
+  "virtual_machine",
+  "s3_details_section",
   "s3_access_token",
   "s3_secret_key",
-  "region",
-  "status",
-  "provisioned_at",
-  "virtual_machine"
+  "s3_bucket",
+  "region"
  ],
  "fields": [
   {
@@ -51,14 +46,6 @@
    "reqd": 1
   },
   {
-   "default": "Draft",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Draft\nProvisioning\nFailed\nReady",
-   "read_only": 1
-  },
-  {
    "fieldname": "provisioned_at",
    "fieldtype": "Datetime",
    "hidden": 1,
@@ -76,12 +63,22 @@
    "fieldtype": "Link",
    "label": "Virtual Machine",
    "options": "Virtual Machine"
+  },
+  {
+   "fieldname": "quickwit_details_section",
+   "fieldtype": "Section Break",
+   "label": "QuickWit Details"
+  },
+  {
+   "fieldname": "s3_details_section",
+   "fieldtype": "Section Break",
+   "label": "S3 Details"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-19 10:32:24.565504",
+ "modified": "2026-02-20 20:02:17.690542",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",

@@ -1,49 +1,27 @@
 {
- "actions": [
-  {
-   "action": "generic_logger.api.test_index_api",
-   "action_type": "Server Action",
-   "label": "Create"
-  },
-  {
-   "action": "generic_logger.api.delete_index",
-   "action_type": "Server Action",
-   "label": "Delete"
-  }
- ],
+ "actions": [],
  "allow_rename": 1,
- "autoname": "prompt",
- "creation": "2026-02-11 09:22:53.310614",
+ "creation": "2026-02-20 17:00:12.402155",
  "doctype": "DocType",
+ "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "amended_from",
   "schema",
   "quickwit_server",
   "created"
  ],
  "fields": [
   {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "QuickWit Index",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
-  },
-  {
    "fieldname": "schema",
    "fieldtype": "JSON",
    "in_list_view": 1,
    "label": "Schema",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "quickwit_server",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "QuickWit Server",
    "options": "QuickWit Server",
    "reqd": 1
@@ -59,13 +37,12 @@
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2026-02-15 14:40:35.805271",
+ "modified": "2026-02-20 17:54:55.808727",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Index",
- "naming_rule": "Set by user",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -78,7 +55,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "submit": 1,
    "write": 1
   }
  ],

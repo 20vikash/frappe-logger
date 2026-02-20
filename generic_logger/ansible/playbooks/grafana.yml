@@ -1,6 +1,8 @@
 ---
 - hosts: all
+  name: Setup Grafana
   become: yes
   become_user: root
   roles:
+    - bootstrap
     - grafana

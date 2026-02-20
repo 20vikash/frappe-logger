@@ -1,6 +1,8 @@
 ---
 - hosts: all
+  name: Setup Quickwit
   become: yes
   become_user: root
   roles:
+    - bootstrap
     - quickwit
