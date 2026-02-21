@@ -10,7 +10,8 @@ import requests
 
 class QuickWitIndex(Document):
 	def autoname(self):
-		self.name = self.schema.index_id
+		schema = frappe.parse_json(self.schema)
+		self.name = schema.index_id
 
 	@frappe.whitelist()
 	def create_index(self):
