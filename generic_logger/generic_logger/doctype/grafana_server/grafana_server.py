@@ -22,7 +22,7 @@ class GrafanaServer(Document):
 			})
 			oauth_client.insert()
 
-			self.oauth = oauth_client
+			self.oauth = oauth_client.name
 
 	@frappe.whitelist()
 	def provision(self):
@@ -39,7 +39,7 @@ class GrafanaServer(Document):
 		client_id = oAuth_client.client_id
 		client_secret = oAuth_client.client_secret
 		admin_user = self.admin_user
-		admin_password = self.admin_password
+		admin_password = self.get_password("admin_password")
 
 		variables = {
 			"grafana_oauth_client_id": client_id,

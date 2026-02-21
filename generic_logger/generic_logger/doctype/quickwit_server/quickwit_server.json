@@ -13,6 +13,7 @@
   "s3_details_section",
   "s3_access_token",
   "s3_secret_key",
+  "column_break_tlws",
   "s3_bucket",
   "region"
  ],
@@ -73,12 +74,16 @@
    "fieldname": "s3_details_section",
    "fieldtype": "Section Break",
    "label": "S3 Details"
+  },
+  {
+   "fieldname": "column_break_tlws",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 20:02:17.690542",
+ "modified": "2026-02-20 22:30:31.864182",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",
