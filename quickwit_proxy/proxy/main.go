@@ -19,6 +19,18 @@ import (
 
 const QUICKWIT_BASE_URL = "http://localhost:7280"
 
+var frappeMetaFields = map[string]bool{
+	"name":        true,
+	"owner":       true,
+	"creation":    true,
+	"modified":    true,
+	"modified_by": true,
+	"docstatus":   true,
+	"idx":         true,
+	"doctype":     true,
+	"user":        true, // skip explicitly
+}
+
 type FrappeResponse struct {
 	Data map[string]any `json:"data"`
 }
@@ -120,7 +132,13 @@ func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
 	// Inject all fields from Log User doc
 	for key, value := range frappeData {
 
-		if key == "doctype" || key == "name" {
+		// Skip metadata/system fields
+		if frappeMetaFields[key] {
+			continue
+		}
+
+		// Only inject non-empty values
+		if value == nil {
 			continue
 		}
 
