@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -10,12 +11,56 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const QUICKWIT_BASE_URL = "http://localhost:7280"
+
+type FrappeResponse struct {
+	Data map[string]any `json:"data"`
+}
+
+func fetchLogUser(email string) (map[string]any, error) {
+	apiToken := os.Getenv("API_TOKEN")
+	apiSecret := os.Getenv("API_SECRET")
+
+	if apiToken == "" || apiSecret == "" {
+		return nil, fmt.Errorf("API_TOKEN or API_SECRET not set")
+	}
+
+	frappeURL := fmt.Sprintf(
+		"http://188.245.72.102:8000/api/resource/Log%%20User/%s",
+		email,
+	)
+
+	req, err := http.NewRequest("GET", frappeURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("token %s:%s", apiToken, apiSecret))
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("frappe returned status %d", resp.StatusCode)
+	}
+
+	var frappeResp FrappeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&frappeResp); err != nil {
+		return nil, err
+	}
+
+	return frappeResp.Data, nil
+}
 
 func extractEmailFromJWT(token string) (string, error) {
 	parts := strings.Split(token, ".")
@@ -43,7 +88,7 @@ func extractEmailFromJWT(token string) (string, error) {
 	return email, nil
 }
 
-func rewriteMsearchBody(rawBody []byte) []byte {
+func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
 	lines := bytes.Split(rawBody, []byte("\n"))
 
 	if len(lines) < 2 || len(bytes.TrimSpace(lines[1])) == 0 {
@@ -69,29 +114,26 @@ func rewriteMsearchBody(rawBody []byte) []byte {
 
 	filters, ok := boolQuery["filter"].([]any)
 	if !ok {
-		return rawBody
+		filters = []any{}
 	}
 
-	for _, f := range filters {
-		filterMap, ok := f.(map[string]any)
-		if !ok {
+	// Inject all fields from Log User doc
+	for key, value := range frappeData {
+
+		if key == "doctype" || key == "name" {
 			continue
 		}
 
-		if qs, exists := filterMap["query_string"]; exists {
-			qsMap, ok := qs.(map[string]any)
-			if !ok {
-				continue
-			}
-
-			queryStr, ok := qsMap["query"].(string)
-			if !ok {
-				continue
-			}
-
-			qsMap["query"] = "(" + queryStr + ") AND (container_id:x)"
+		filter := map[string]any{
+			"term": map[string]any{
+				key: value,
+			},
 		}
+
+		filters = append(filters, filter)
 	}
+
+	boolQuery["filter"] = filters
 
 	modifiedQuery, err := json.Marshal(queryObj)
 	if err != nil {
@@ -113,25 +155,23 @@ func main() {
 
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
-			// Set backend target
+
 			pr.SetURL(target)
 
-			// Only rewrite POST requests
 			if pr.In.Method != http.MethodPost {
 				return
 			}
 
-			// Read original request body
 			bodyBytes, err := io.ReadAll(pr.In.Body)
 			if err != nil {
 				return
 			}
 			pr.In.Body.Close()
 
-			// Rewrite body
-			updatedBody := rewriteMsearchBody(bodyBytes)
+			logUserData, _ := pr.In.Context().Value("logUserData").(map[string]any)
 
-			// Replace outgoing body
+			updatedBody := rewriteMsearchBody(bodyBytes, logUserData)
+
 			pr.Out.Body = io.NopCloser(bytes.NewReader(updatedBody))
 			pr.Out.ContentLength = int64(len(updatedBody))
 			pr.Out.Header.Set("Content-Length", strconv.Itoa(len(updatedBody)))
@@ -142,6 +182,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+
 		jwtToken := r.Header.Get("X-Grafana-Id")
 		if jwtToken == "" {
 			http.Error(w, "Missing X-Grafana-Id", http.StatusUnauthorized)
@@ -154,9 +195,18 @@ func main() {
 			return
 		}
 
-		fmt.Println("Request from user email:", email)
+		log.Println("Request from user email:", email)
 
-		// Continue normal processing
+		// Fetch Log User document
+		logUserData, err := fetchLogUser(email)
+		if err != nil {
+			http.Error(w, "Failed to fetch user data", http.StatusInternalServerError)
+			return
+		}
+
+		// Inject into context so Rewrite can use it
+		r = r.WithContext(context.WithValue(r.Context(), "logUserData", logUserData))
+
 		proxy.ServeHTTP(w, r)
 	})
 
