@@ -8,6 +8,9 @@ Pull=always
 Volume={{ quickwit_config_dir }}/config.yaml:/quickwit/config/config.yaml:Z
 PublishPort=8080:8080
 
+Environment=API_TOKEN={{ api_token }}
+Environment=API_SECRET={{ api_secret }}
+
 [Service]
 Restart=always
 TimeoutStopSec=70

@@ -13,6 +13,9 @@ class QuickWitServer(Document):
         access_token = self.get_password("s3_access_token")
         secret_key = self.get_password("s3_secret_key")
 
+        api_token = self.get_password("api_token")
+        api_secret = self.get_password("api_secret")
+
         endpoint_url = self.endpoint_url
         region = self.region
 
@@ -29,7 +32,9 @@ class QuickWitServer(Document):
             "quickwit_image": "ghcr.io/20vikash/frappe-logger:latest",
             "quickwit_port": 7280,
             "quickwit_data_dir": "/var/lib/quickwit",
-            "quickwit_quadlet_dir": "/etc/containers/systemd"
+            "quickwit_quadlet_dir": "/etc/containers/systemd",
+            "api_token": api_token,
+            "api_secret": api_secret
         }
 
         play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/quickwit.yml", run_in_background=True, variables=variables)

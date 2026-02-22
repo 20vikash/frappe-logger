@@ -15,7 +15,10 @@
   "s3_secret_key",
   "column_break_tlws",
   "s3_bucket",
-  "region"
+  "region",
+  "api_details_section",
+  "api_token",
+  "api_secret"
  ],
  "fields": [
   {
@@ -78,12 +81,28 @@
   {
    "fieldname": "column_break_tlws",
    "fieldtype": "Column Break"
+  },
+  {
+   "description": "This is required for the auth proxy to make requests to frappe DOCTYPEs",
+   "fieldname": "api_details_section",
+   "fieldtype": "Section Break",
+   "label": "API Details"
+  },
+  {
+   "fieldname": "api_token",
+   "fieldtype": "Password",
+   "label": "API Token"
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 22:30:31.864182",
+ "modified": "2026-02-22 11:34:57.633729",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",
