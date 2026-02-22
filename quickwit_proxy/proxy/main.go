@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,32 @@ import (
 )
 
 const QUICKWIT_BASE_URL = "http://localhost:7280"
+
+func extractEmailFromJWT(token string) (string, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid jwt format")
+	}
+
+	payloadPart := parts[1]
+
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	if err != nil {
+		return "", err
+	}
+
+	var claims map[string]any
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return "", err
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		return "", fmt.Errorf("email claim not found")
+	}
+
+	return email, nil
+}
 
 func rewriteMsearchBody(rawBody []byte) []byte {
 	lines := bytes.Split(rawBody, []byte("\n"))
@@ -114,17 +141,22 @@ func main() {
 		},
 	}
 
-	// Block UI access
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		blockedPaths := []string{"/ui"}
-		for _, path := range blockedPaths {
-			if strings.Contains(r.URL.Path, path) {
-				http.Error(w, "Forbidden: Path is blocked", http.StatusForbidden)
-				fmt.Printf("Blocked access to: %s\n", r.URL.Path)
-				return
-			}
+		jwtToken := r.Header.Get("X-Grafana-Id")
+		if jwtToken == "" {
+			http.Error(w, "Missing X-Grafana-Id", http.StatusUnauthorized)
+			return
 		}
 
+		email, err := extractEmailFromJWT(jwtToken)
+		if err != nil {
+			http.Error(w, "Invalid JWT", http.StatusUnauthorized)
+			return
+		}
+
+		fmt.Println("Request from user email:", email)
+
+		// Continue normal processing
 		proxy.ServeHTTP(w, r)
 	})
 
