@@ -3,25 +3,26 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/MicahParks/keyfunc/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-const QUICKWIT_BASE_URL = "http://localhost:7280"
+const (
+	QUICKWIT_BASE_URL = "http://localhost:7280"
+	JWKS_URL          = "http://188.245.72.65:3000/api/signing-keys/keys"
+	FRAPPE_BASE_URL   = "https://logger.kwscloud.in"
+)
 
 var frappeMetaFields = map[string]bool{
 	"name":        true,
@@ -32,60 +33,61 @@ var frappeMetaFields = map[string]bool{
 	"docstatus":   true,
 	"idx":         true,
 	"doctype":     true,
-	"user":        true, // skip explicitly
-}
-
-type JWK struct {
-	Kty string `json:"kty"`
-	Crv string `json:"crv"`
-	Kid string `json:"kid"`
-	Use string `json:"use"`
-	Alg string `json:"alg"`
-	X   string `json:"x"`
-	Y   string `json:"y"`
-}
-
-type JWKS struct {
-	Keys []JWK `json:"keys"`
+	"user":        true,
 }
 
 type FrappeResponse struct {
 	Data map[string]any `json:"data"`
 }
 
-func fetchJWKS() (*JWKS, error) {
-	resp, err := http.Get("http://188.245.72.65:3000/api/signing-keys/keys")
+var jwks *keyfunc.JWKS
+
+func initJWKS() {
+	var err error
+
+	jwks, err = keyfunc.Get(JWKS_URL, keyfunc.Options{
+		RefreshInterval: time.Hour, // auto refresh
+		RefreshTimeout:  10 * time.Second,
+	})
+
 	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var jwks JWKS
-	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
-		return nil, err
+		log.Fatalf("Failed to create JWKS: %v", err)
 	}
 
-	return &jwks, nil
+	log.Println("JWKS initialized")
+}
+
+func verifyJWT(tokenString string) (jwt.MapClaims, error) {
+
+	token, err := jwt.Parse(tokenString, jwks.Keyfunc)
+	if err != nil {
+		return nil, fmt.Errorf("parse error: %w", err)
+	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims")
+	}
+
+	return claims, nil
 }
 
 func fetchLogUser(email string) (map[string]any, error) {
+
 	apiToken := os.Getenv("API_TOKEN")
 	apiSecret := os.Getenv("API_SECRET")
 
 	if apiToken == "" || apiSecret == "" {
-		return nil, fmt.Errorf("API_TOKEN or API_SECRET not set")
+		return nil, fmt.Errorf("missing frappe credentials")
 	}
 
-	frappeURL := fmt.Sprintf(
-		"http://188.245.72.102:8000/api/resource/Log%%20User/%s",
-		email,
-	)
+	url := fmt.Sprintf("%s/api/resource/Log%%20User/%s", FRAPPE_BASE_URL, email)
 
-	req, err := http.NewRequest("GET", frappeURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
+	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", fmt.Sprintf("token %s:%s", apiToken, apiSecret))
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -96,114 +98,21 @@ func fetchLogUser(email string) (map[string]any, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("frappe returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("frappe returned %d", resp.StatusCode)
 	}
 
-	var frappeResp FrappeResponse
-	if err := json.NewDecoder(resp.Body).Decode(&frappeResp); err != nil {
+	var result FrappeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
 
-	return frappeResp.Data, nil
-}
-
-func verifyJWT(token string) (map[string]any, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid jwt format")
-	}
-
-	headerB64, payloadB64, signatureB64 := parts[0], parts[1], parts[2]
-
-	// Decode header
-	headerBytes, err := base64.RawURLEncoding.DecodeString(headerB64)
-	if err != nil {
-		return nil, err
-	}
-
-	var header map[string]any
-	if err := json.Unmarshal(headerBytes, &header); err != nil {
-		return nil, err
-	}
-
-	kid, ok := header["kid"].(string)
-	if !ok {
-		return nil, fmt.Errorf("kid not found")
-	}
-
-	// Fetch JWKS
-	jwks, err := fetchJWKS()
-	if err != nil {
-		return nil, err
-	}
-
-	var key *JWK
-	for _, k := range jwks.Keys {
-		if k.Kid == kid {
-			key = &k
-			break
-		}
-	}
-	if key == nil {
-		return nil, fmt.Errorf("matching key not found")
-	}
-
-	// Decode public key coordinates
-	xBytes, _ := base64.RawURLEncoding.DecodeString(key.X)
-	yBytes, _ := base64.RawURLEncoding.DecodeString(key.Y)
-
-	pubKey := ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     new(big.Int).SetBytes(xBytes),
-		Y:     new(big.Int).SetBytes(yBytes),
-	}
-
-	// Hash signing input
-	signingInput := headerB64 + "." + payloadB64
-	hash := sha256.Sum256([]byte(signingInput))
-
-	// Decode signature
-	sigBytes, err := base64.RawURLEncoding.DecodeString(signatureB64)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(sigBytes) != 64 {
-		return nil, fmt.Errorf("invalid signature length")
-	}
-
-	r := new(big.Int).SetBytes(sigBytes[:32])
-	s := new(big.Int).SetBytes(sigBytes[32:])
-
-	if !ecdsa.Verify(&pubKey, hash[:], r, s) {
-		return nil, fmt.Errorf("invalid signature")
-	}
-
-	// Decode payload
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadB64)
-	if err != nil {
-		return nil, err
-	}
-
-	var claims map[string]any
-	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return nil, err
-	}
-
-	// Validate exp
-	if exp, ok := claims["exp"].(float64); ok {
-		if int64(exp) < time.Now().Unix() {
-			return nil, fmt.Errorf("token expired")
-		}
-	}
-
-	return claims, nil
+	return result.Data, nil
 }
 
 func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
-	lines := bytes.Split(rawBody, []byte("\n"))
 
-	if len(lines) < 2 || len(bytes.TrimSpace(lines[1])) == 0 {
+	lines := bytes.Split(rawBody, []byte("\n"))
+	if len(lines) < 2 {
 		return rawBody
 	}
 
@@ -214,62 +123,35 @@ func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
 		return rawBody
 	}
 
-	query, ok := queryObj["query"].(map[string]any)
-	if !ok {
-		return rawBody
-	}
+	query := queryObj["query"].(map[string]any)
+	boolQuery := query["bool"].(map[string]any)
 
-	boolQuery, ok := query["bool"].(map[string]any)
-	if !ok {
-		return rawBody
-	}
+	filters, _ := boolQuery["filter"].([]any)
 
-	filters, ok := boolQuery["filter"].([]any)
-	if !ok {
-		filters = []any{}
-	}
-
-	// Inject all fields from Log User doc
 	for key, value := range frappeData {
-
-		// Skip metadata/system fields
-		if frappeMetaFields[key] {
+		if frappeMetaFields[key] || value == nil {
 			continue
 		}
 
-		// Only inject non-empty values
-		if value == nil {
-			continue
-		}
-
-		filter := map[string]any{
+		filters = append(filters, map[string]any{
 			"term": map[string]any{
 				key: value,
 			},
-		}
-
-		filters = append(filters, filter)
+		})
 	}
 
 	boolQuery["filter"] = filters
 
-	modifiedQuery, err := json.Marshal(queryObj)
-	if err != nil {
-		return rawBody
-	}
+	modifiedQuery, _ := json.Marshal(queryObj)
 
-	return bytes.Join([][]byte{
-		meta,
-		modifiedQuery,
-		[]byte(""),
-	}, []byte("\n"))
+	return bytes.Join([][]byte{meta, modifiedQuery, []byte("")}, []byte("\n"))
 }
 
 func main() {
-	target, err := url.Parse(QUICKWIT_BASE_URL)
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	initJWKS()
+
+	target, _ := url.Parse(QUICKWIT_BASE_URL)
 
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
@@ -280,10 +162,7 @@ func main() {
 				return
 			}
 
-			bodyBytes, err := io.ReadAll(pr.In.Body)
-			if err != nil {
-				return
-			}
+			bodyBytes, _ := io.ReadAll(pr.In.Body)
 			pr.In.Body.Close()
 
 			logUserData, _ := pr.In.Context().Value("logUserData").(map[string]any)
@@ -294,41 +173,34 @@ func main() {
 			pr.Out.ContentLength = int64(len(updatedBody))
 			pr.Out.Header.Set("Content-Length", strconv.Itoa(len(updatedBody)))
 		},
-		Transport: &http.Transport{
-			ResponseHeaderTimeout: 5 * time.Second,
-		},
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		jwtToken := r.Header.Get("X-Grafana-Id")
-		if jwtToken == "" {
-			http.Error(w, "Missing X-Grafana-Id", http.StatusUnauthorized)
+		token := r.Header.Get("X-Grafana-Id")
+		if token == "" {
+			http.Error(w, "Missing token", http.StatusUnauthorized)
 			return
 		}
 
-		claims, err := verifyJWT(jwtToken)
+		claims, err := verifyJWT(token)
 		if err != nil {
-			http.Error(w, "Invalid JWT", http.StatusUnauthorized)
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
 
 		email, ok := claims["email"].(string)
 		if !ok {
-			http.Error(w, "Email not found in token", http.StatusUnauthorized)
+			http.Error(w, "Email missing", http.StatusUnauthorized)
 			return
 		}
 
-		log.Println("Request from user email:", email)
-
-		// Fetch Log User document
 		logUserData, err := fetchLogUser(email)
 		if err != nil {
-			http.Error(w, "Failed to fetch user data", http.StatusInternalServerError)
+			http.Error(w, "Frappe lookup failed", http.StatusInternalServerError)
 			return
 		}
 
-		// Inject into context so Rewrite can use it
 		r = r.WithContext(context.WithValue(r.Context(), "logUserData", logUserData))
 
 		proxy.ServeHTTP(w, r)
