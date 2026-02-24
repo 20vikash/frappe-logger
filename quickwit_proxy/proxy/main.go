@@ -3,11 +3,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -31,8 +35,37 @@ var frappeMetaFields = map[string]bool{
 	"user":        true, // skip explicitly
 }
 
+type JWK struct {
+	Kty string `json:"kty"`
+	Crv string `json:"crv"`
+	Kid string `json:"kid"`
+	Use string `json:"use"`
+	Alg string `json:"alg"`
+	X   string `json:"x"`
+	Y   string `json:"y"`
+}
+
+type JWKS struct {
+	Keys []JWK `json:"keys"`
+}
+
 type FrappeResponse struct {
 	Data map[string]any `json:"data"`
+}
+
+func fetchJWKS() (*JWKS, error) {
+	resp, err := http.Get("http://188.245.72.65:3000/api/signing-keys/keys")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var jwks JWKS
+	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+		return nil, err
+	}
+
+	return &jwks, nil
 }
 
 func fetchLogUser(email string) (map[string]any, error) {
@@ -74,30 +107,97 @@ func fetchLogUser(email string) (map[string]any, error) {
 	return frappeResp.Data, nil
 }
 
-func extractEmailFromJWT(token string) (string, error) {
+func verifyJWT(token string) (map[string]any, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return "", fmt.Errorf("invalid jwt format")
+		return nil, fmt.Errorf("invalid jwt format")
 	}
 
-	payloadPart := parts[1]
+	headerB64, payloadB64, signatureB64 := parts[0], parts[1], parts[2]
 
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	// Decode header
+	headerBytes, err := base64.RawURLEncoding.DecodeString(headerB64)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+
+	var header map[string]any
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
+		return nil, err
+	}
+
+	kid, ok := header["kid"].(string)
+	if !ok {
+		return nil, fmt.Errorf("kid not found")
+	}
+
+	// Fetch JWKS
+	jwks, err := fetchJWKS()
+	if err != nil {
+		return nil, err
+	}
+
+	var key *JWK
+	for _, k := range jwks.Keys {
+		if k.Kid == kid {
+			key = &k
+			break
+		}
+	}
+	if key == nil {
+		return nil, fmt.Errorf("matching key not found")
+	}
+
+	// Decode public key coordinates
+	xBytes, _ := base64.RawURLEncoding.DecodeString(key.X)
+	yBytes, _ := base64.RawURLEncoding.DecodeString(key.Y)
+
+	pubKey := ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     new(big.Int).SetBytes(xBytes),
+		Y:     new(big.Int).SetBytes(yBytes),
+	}
+
+	// Hash signing input
+	signingInput := headerB64 + "." + payloadB64
+	hash := sha256.Sum256([]byte(signingInput))
+
+	// Decode signature
+	sigBytes, err := base64.RawURLEncoding.DecodeString(signatureB64)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(sigBytes) != 64 {
+		return nil, fmt.Errorf("invalid signature length")
+	}
+
+	r := new(big.Int).SetBytes(sigBytes[:32])
+	s := new(big.Int).SetBytes(sigBytes[32:])
+
+	if !ecdsa.Verify(&pubKey, hash[:], r, s) {
+		return nil, fmt.Errorf("invalid signature")
+	}
+
+	// Decode payload
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadB64)
+	if err != nil {
+		return nil, err
 	}
 
 	var claims map[string]any
 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	email, ok := claims["email"].(string)
-	if !ok {
-		return "", fmt.Errorf("email claim not found")
+	// Validate exp
+	if exp, ok := claims["exp"].(float64); ok {
+		if int64(exp) < time.Now().Unix() {
+			return nil, fmt.Errorf("token expired")
+		}
 	}
 
-	return email, nil
+	return claims, nil
 }
 
 func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
@@ -207,9 +307,15 @@ func main() {
 			return
 		}
 
-		email, err := extractEmailFromJWT(jwtToken)
+		claims, err := verifyJWT(jwtToken)
 		if err != nil {
 			http.Error(w, "Invalid JWT", http.StatusUnauthorized)
+			return
+		}
+
+		email, ok := claims["email"].(string)
+		if !ok {
+			http.Error(w, "Email not found in token", http.StatusUnauthorized)
 			return
 		}
 
