@@ -179,18 +179,21 @@ func main() {
 
 		token := r.Header.Get("X-Grafana-Id")
 		if token == "" {
+			log.Println("Missing token")
 			http.Error(w, "Missing token", http.StatusUnauthorized)
 			return
 		}
 
 		claims, err := verifyJWT(token)
 		if err != nil {
+			log.Println("Invalid token", err.Error())
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
 
 		email, ok := claims["email"].(string)
 		if !ok {
+			log.Println("Email missing")
 			http.Error(w, "Email missing", http.StatusUnauthorized)
 			return
 		}
