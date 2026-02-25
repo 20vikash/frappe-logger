@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import cstr
 
 
 class GrafanaServer(Document):
@@ -28,8 +29,12 @@ class GrafanaServer(Document):
 	def provision(self):
 		if not frappe.db.exists("Grafana Server", self.name):
 			frappe.throw("Save the document before provisioning")
+		
+		site_name = cstr(frappe.local.site)
 
 		quickwit_index = frappe.get_doc("QuickWit Index", self.quickwit_index)
+		quickwit_server = frappe.get_doc("QuickWit Server", quickwit_index.quickwit_server)
+		quickwit_vm = frappe.get_doc("Virtual Machine", quickwit_server.virtual_machine)
 
 		vm = frappe.get_doc("Virtual Machine", self.virtual_machine)
 		grafana_host = vm.public_ip_address
@@ -46,12 +51,12 @@ class GrafanaServer(Document):
 			"grafana_oauth_client_secret": client_secret,
 			"grafana_admin_user": admin_user,
 			"grafana_admin_password": admin_password,
-			"grafana_oauth_auth_url": "http://{}:8000/api/method/frappe.integrations.oauth2.authorize".format("188.245.72.102"),
-			"grafana_oauth_token_url": "http://{}:8000/api/method/frappe.integrations.oauth2.get_token".format("188.245.72.102"),
-			"grafana_oauth_api_url": "http://{}:8000/api/method/frappe.integrations.oauth2.openid_profile".format("188.245.72.102"),
+			"grafana_oauth_auth_url": "https://{}/api/method/frappe.integrations.oauth2.authorize".format(site_name),
+			"grafana_oauth_token_url": "https://{}/api/method/frappe.integrations.oauth2.get_token".format(site_name),
+			"grafana_oauth_api_url": "https://{}/api/method/frappe.integrations.oauth2.openid_profile".format(site_name),
 			"grafana_domain": "{}:3000".format(grafana_host),
 			"grafana_root_url": "http://{}:3000".format(grafana_host),
-			"quickwit_url": "http://{}:8080/api/v1".format("188.245.72.65"),
+			"quickwit_url": "http://{}:8080/api/v1".format(quickwit_vm.public_ip_address),
 			"quickwit_index": quickwit_index.name,
 			"grafana_image": "docker.io/grafana/grafana-enterprise:latest",
 			"grafana_port": 3000,
