@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/MicahParks/keyfunc/v2"
@@ -22,6 +23,11 @@ const (
 	QUICKWIT_BASE_URL = "http://localhost:7280"
 	JWKS_URL          = "http://188.245.72.65:3000/api/signing-keys/keys"
 	FRAPPE_BASE_URL   = "https://logger.kwscloud.in"
+)
+
+var (
+	logUserCache = make(map[string]map[string]any)
+	cacheMutex   sync.RWMutex
 )
 
 var frappeMetaFields = map[string]bool{
@@ -78,6 +84,14 @@ func verifyJWT(tokenString string) (jwt.MapClaims, error) {
 
 func fetchLogUser(email string) (map[string]any, error) {
 
+	cacheMutex.RLock()
+	cached, exists := logUserCache[email]
+	cacheMutex.RUnlock()
+
+	if exists {
+		return cached, nil
+	}
+
 	apiToken := os.Getenv("API_TOKEN")
 	apiSecret := os.Getenv("API_SECRET")
 
@@ -105,6 +119,10 @@ func fetchLogUser(email string) (map[string]any, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
+
+	cacheMutex.Lock()
+	logUserCache[email] = result.Data
+	cacheMutex.Unlock()
 
 	return result.Data, nil
 }
