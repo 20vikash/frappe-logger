@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -42,8 +41,10 @@ var frappeMetaFields = map[string]bool{
 	"user":        true,
 }
 
-type FrappeResponse struct {
-	Data map[string]any `json:"data"`
+type LogUserMethodResponse struct {
+	Message struct {
+		LogUser map[string]any `json:"log_user"`
+	} `json:"message"`
 }
 
 var jwks *keyfunc.JWKS
@@ -82,7 +83,7 @@ func verifyJWT(tokenString string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func fetchLogUser(email string) (map[string]any, error) {
+func fetchLogUser(jwtToken string, email string) (map[string]any, error) {
 
 	cacheMutex.RLock()
 	cached, exists := logUserCache[email]
@@ -92,17 +93,26 @@ func fetchLogUser(email string) (map[string]any, error) {
 		return cached, nil
 	}
 
-	apiToken := os.Getenv("API_TOKEN")
-	apiSecret := os.Getenv("API_SECRET")
-
-	if apiToken == "" || apiSecret == "" {
-		return nil, fmt.Errorf("missing frappe credentials")
+	requestBody := map[string]string{
+		"jwt_token": jwtToken,
 	}
 
-	url := fmt.Sprintf("%s/api/resource/Log%%20User/%s", FRAPPE_BASE_URL, email)
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Authorization", fmt.Sprintf("token %s:%s", apiToken, apiSecret))
+	url := fmt.Sprintf(
+		"%s/api/method/generic_logger.api.get_log_user_meta",
+		FRAPPE_BASE_URL,
+	)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
@@ -115,16 +125,21 @@ func fetchLogUser(email string) (map[string]any, error) {
 		return nil, fmt.Errorf("frappe returned %d", resp.StatusCode)
 	}
 
-	var result FrappeResponse
+	var result LogUserMethodResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
 
+	logUserData := result.Message.LogUser
+	if logUserData == nil {
+		return nil, fmt.Errorf("log_user not found in response")
+	}
+
 	cacheMutex.Lock()
-	logUserCache[email] = result.Data
+	logUserCache[email] = logUserData
 	cacheMutex.Unlock()
 
-	return result.Data, nil
+	return logUserData, nil
 }
 
 func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
@@ -216,7 +231,7 @@ func main() {
 			return
 		}
 
-		logUserData, err := fetchLogUser(email)
+		logUserData, err := fetchLogUser(token, email)
 		if err != nil {
 			http.Error(w, "Frappe lookup failed", http.StatusInternalServerError)
 			return

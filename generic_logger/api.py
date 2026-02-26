@@ -5,9 +5,12 @@ from generic_logger.api_helper import verify_jwt
 def get_log_user_meta(jwt_token: str):
     try:
         claims = verify_jwt(jwt_token)
+
+        email = claims.get("email")
+        log_user = frappe.get_doc("Log User", email)
+
         return {
-            "valid": True,
-            "claims": claims
+            "log_user": log_user.as_dict()
         }
     except Exception as e:
         frappe.throw(str(e))
