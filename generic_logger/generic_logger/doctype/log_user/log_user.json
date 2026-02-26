@@ -23,13 +23,14 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Tenant ID",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-22 11:13:19.085075",
+ "modified": "2026-02-26 11:21:17.998848",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "Log User",

@@ -1,5 +1,7 @@
 ---
 - hosts: all
+  vars:
+    grafana_config_dir: "/etc/grafana"
   name: Setup Quickwit
   become: yes
   become_user: root

@@ -1,11 +1,5 @@
 {
- "actions": [
-  {
-   "action": "generic_logger.api.provision_grafana",
-   "action_type": "Server Action",
-   "label": "Provision"
-  }
- ],
+ "actions": [],
  "allow_rename": 1,
  "autoname": "field:virtual_machine",
  "creation": "2026-02-15 12:37:02.222998",
@@ -64,7 +58,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-20 22:38:25.887994",
+ "modified": "2026-02-25 14:51:25.548972",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "Grafana Server",

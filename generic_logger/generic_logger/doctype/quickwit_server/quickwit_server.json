@@ -7,7 +7,6 @@
  "engine": "InnoDB",
  "field_order": [
   "quickwit_details_section",
-  "endpoint_url",
   "provisioned_at",
   "virtual_machine",
   "s3_details_section",
@@ -16,6 +15,7 @@
   "column_break_tlws",
   "s3_bucket",
   "region",
+  "endpoint_url",
   "api_details_section",
   "api_token",
   "api_secret"
@@ -91,18 +91,20 @@
   {
    "fieldname": "api_token",
    "fieldtype": "Password",
-   "label": "API Token"
+   "label": "API Token",
+   "reqd": 1
   },
   {
    "fieldname": "api_secret",
    "fieldtype": "Password",
-   "label": "API Secret"
+   "label": "API Secret",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-22 11:34:57.633729",
+ "modified": "2026-02-25 11:18:01.642890",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",
