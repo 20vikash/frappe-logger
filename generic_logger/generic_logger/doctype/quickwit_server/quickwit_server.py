@@ -20,6 +20,7 @@ class QuickWitServer(Document):
         region = self.region
 
         vm = frappe.get_doc("Virtual Machine", self.virtual_machine)
+        private_ip = vm.private_ip_address
 
         variables = {
             "S3_REGION": region,
@@ -34,7 +35,8 @@ class QuickWitServer(Document):
             "quickwit_data_dir": "/var/lib/quickwit",
             "quickwit_quadlet_dir": "/etc/containers/systemd",
             "api_token": api_token,
-            "api_secret": api_secret
+            "api_secret": api_secret,
+            "private_ip": private_ip
         }
 
         play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/quickwit.yml", run_in_background=True, variables=variables)

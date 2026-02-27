@@ -6,7 +6,9 @@ After=network.target
 Image={{ quickwit_image }}
 Pull=always
 Volume={{ quickwit_config_dir }}/config.yaml:/quickwit/config/config.yaml:Z
-PublishPort=8080:8080
+
+PublishPort={{ private_ip }}:8080:8080
+PublishPort={{ private_ip }}:7280:7280
 
 Environment=API_TOKEN={{ api_token }}
 Environment=API_SECRET={{ api_secret }}
