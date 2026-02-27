@@ -16,9 +16,7 @@
   "s3_bucket",
   "region",
   "endpoint_url",
-  "api_details_section",
-  "api_token",
-  "api_secret"
+  "api_details_section"
  ],
  "fields": [
   {
@@ -87,24 +85,12 @@
    "fieldname": "api_details_section",
    "fieldtype": "Section Break",
    "label": "API Details"
-  },
-  {
-   "fieldname": "api_token",
-   "fieldtype": "Password",
-   "label": "API Token",
-   "reqd": 1
-  },
-  {
-   "fieldname": "api_secret",
-   "fieldtype": "Password",
-   "label": "API Secret",
-   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-25 11:18:01.642890",
+ "modified": "2026-02-27 19:43:35.396986",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",
