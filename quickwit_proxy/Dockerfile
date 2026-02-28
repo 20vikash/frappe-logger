@@ -11,7 +11,9 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o proxy
 # ---------- Stage 2: Final Image ----------
 FROM docker.io/quickwit/quickwit:qw-fulmicoton-lambda
 
-RUN apk add --no-cache supervisor
+RUN apt-get update && \
+    apt-get install -y supervisor && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /quickwit/config
 
