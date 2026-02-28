@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	QUICKWIT_BASE_URL = "http://localhost:7280"
+	QUICKWIT_BASE_URL = "http://10.0.0.2:7280"
 	JWKS_URL          = "http://188.245.72.65:3000/api/signing-keys/keys"
-	FRAPPE_BASE_URL   = "https://logger.kwscloud.in"
+	FRAPPE_BASE_URL   = "http://188.245.72.102:8000"
 )
 
 var (
@@ -81,6 +81,15 @@ func verifyJWT(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func fixRangeField(filter map[string]any) {
+	if r, ok := filter["range"].(map[string]any); ok {
+		if _, exists := r[""]; exists {
+			r["time"] = r[""]
+			delete(r, "")
+		}
+	}
 }
 
 func fetchLogUser(jwtToken string, email string) (map[string]any, error) {
@@ -156,10 +165,47 @@ func rewriteMsearchBody(rawBody []byte, frappeData map[string]any) []byte {
 		return rawBody
 	}
 
+	if aggs, ok := queryObj["aggs"].(map[string]any); ok {
+		for _, agg := range aggs {
+			if aggMap, ok := agg.(map[string]any); ok {
+				if dh, ok := aggMap["date_histogram"].(map[string]any); ok {
+					if dh["field"] == "" {
+						dh["field"] = "time"
+					}
+				}
+			}
+		}
+	}
+
 	query := queryObj["query"].(map[string]any)
 	boolQuery := query["bool"].(map[string]any)
 
-	filters, _ := boolQuery["filter"].([]any)
+	if filtersRaw, ok := boolQuery["filter"]; ok {
+
+		switch f := filtersRaw.(type) {
+
+		case map[string]any:
+			fixRangeField(f)
+
+		case []any:
+			for _, item := range f {
+				if m, ok := item.(map[string]any); ok {
+					fixRangeField(m)
+				}
+			}
+		}
+	}
+
+	var filters []any
+
+	switch f := boolQuery["filter"].(type) {
+	case []any:
+		filters = f
+	case map[string]any:
+		filters = []any{f}
+	default:
+		filters = []any{}
+	}
 
 	for key, value := range frappeData {
 		if frappeMetaFields[key] || value == nil {
@@ -189,14 +235,17 @@ func main() {
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
 
+			bodyBytes, _ := io.ReadAll(pr.In.Body)
+			pr.In.Body.Close()
+
+			log.Println(string(bodyBytes))
+
 			pr.SetURL(target)
 
 			if pr.In.Method != http.MethodPost {
+				pr.Out.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 				return
 			}
-
-			bodyBytes, _ := io.ReadAll(pr.In.Body)
-			pr.In.Body.Close()
 
 			logUserData, _ := pr.In.Context().Value("logUserData").(map[string]any)
 
@@ -213,7 +262,9 @@ func main() {
 		token := r.Header.Get("X-Grafana-Id")
 		if token == "" {
 			log.Println("Missing token")
-			http.Error(w, "Missing token", http.StatusUnauthorized)
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"ok","authenticated":false}`))
 			return
 		}
 
@@ -233,6 +284,7 @@ func main() {
 
 		logUserData, err := fetchLogUser(token, email)
 		if err != nil {
+			log.Println(email)
 			http.Error(w, "Frappe lookup failed", http.StatusInternalServerError)
 			return
 		}
