@@ -11,15 +11,13 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o proxy
 # ---------- Stage 2: Final Image ----------
 FROM docker.io/quickwit/quickwit:qw-fulmicoton-lambda
 
+RUN apk add --no-cache supervisor
+
 WORKDIR /quickwit/config
 
-# Copy proxy binary
 COPY --from=builder /app/proxy /quickwit/config/proxy
-
-# Copy start script
-COPY start.sh /quickwit/config/start.sh
-RUN chmod +x /quickwit/config/start.sh
+COPY supervisord.conf /etc/supervisord.conf
 
 EXPOSE 8080
 
-ENTRYPOINT ["/quickwit/config/start.sh"]
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
