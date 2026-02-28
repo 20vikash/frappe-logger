@@ -56,7 +56,7 @@ class GrafanaServer(Document):
 			"grafana_oauth_api_url": "https://{}/api/method/frappe.integrations.oauth2.openid_profile".format(site_name),
 			"grafana_domain": "{}:3000".format(grafana_host),
 			"grafana_root_url": "http://{}:3000".format(grafana_host),
-			"quickwit_url": "http://{}:8080/api/v1".format(quickwit_vm.public_ip_address),
+			"quickwit_url": "http://{}:8080/api/v1".format(quickwit_vm.private_ip_address),
 			"quickwit_index": quickwit_index.name,
 			"grafana_image": "docker.io/grafana/grafana-enterprise:latest",
 			"grafana_port": 3000,
