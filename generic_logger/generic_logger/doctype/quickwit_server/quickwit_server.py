@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import cstr
 
 class QuickWitServer(Document):
     @frappe.whitelist()
@@ -22,6 +23,9 @@ class QuickWitServer(Document):
         vm = frappe.get_doc("Virtual Machine", self.virtual_machine)
         private_ip = vm.private_ip_address
 
+        grafana_vm = frappe.get_doc("Virtual Machine", self.grafana_vm)
+        grafana_private_ip = grafana_vm.private_ip_address
+
         variables = {
             "S3_REGION": region,
             "S3_ENDPOINT": endpoint_url,
@@ -36,7 +40,9 @@ class QuickWitServer(Document):
             "quickwit_quadlet_dir": "/etc/containers/systemd",
             "api_token": api_token,
             "api_secret": api_secret,
-            "private_ip": private_ip
+            "private_ip": private_ip,
+            "grafana_host": grafana_private_ip,
+            "frappe_host": cstr(frappe.local.site)
         }
 
         play = vm.run_ansible_play(app="generic_logger", playbook_path="ansible/playbooks/quickwit.yml", run_in_background=True, variables=variables)

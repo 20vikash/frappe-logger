@@ -16,7 +16,8 @@
   "s3_bucket",
   "region",
   "endpoint_url",
-  "api_details_section"
+  "grafana_jwks_section",
+  "grafana_vm"
  ],
  "fields": [
   {
@@ -81,16 +82,22 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "This is required for the auth proxy to make requests to frappe DOCTYPEs",
-   "fieldname": "api_details_section",
+   "fieldname": "grafana_jwks_section",
    "fieldtype": "Section Break",
-   "label": "API Details"
+   "label": "Grafana JWKS"
+  },
+  {
+   "fieldname": "grafana_vm",
+   "fieldtype": "Link",
+   "label": "Grafana VM",
+   "options": "Virtual Machine",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-27 19:43:35.396986",
+ "modified": "2026-02-28 22:03:41.096347",
  "modified_by": "Administrator",
  "module": "Generic Logger",
  "name": "QuickWit Server",

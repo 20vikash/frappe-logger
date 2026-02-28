@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -18,10 +19,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const (
-	QUICKWIT_BASE_URL = "http://10.0.0.2:7280"
-	JWKS_URL          = "http://188.245.72.65:3000/api/signing-keys/keys"
-	FRAPPE_BASE_URL   = "http://188.245.72.102:8000"
+var (
+	QUICKWIT_BASE_URL = fmt.Sprintf("http://%s:7280", os.Getenv("QUICKWIT_HOST"))
+	JWKS_URL          = fmt.Sprintf("http://%s:3000/api/signing-keys/keys", os.Getenv("GRAFANA_HOST"))
+	FRAPPE_BASE_URL   = fmt.Sprintf("https://%s", os.Getenv("FRAPPE_HOST"))
 )
 
 var (

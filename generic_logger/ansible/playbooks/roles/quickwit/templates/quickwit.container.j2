@@ -10,8 +10,9 @@ Volume={{ quickwit_config_dir }}/config.yaml:/quickwit/config/config.yaml:Z
 PublishPort={{ private_ip }}:8080:8080
 PublishPort={{ private_ip }}:7280:7280
 
-Environment=API_TOKEN={{ api_token }}
-Environment=API_SECRET={{ api_secret }}
+Environment=FRAPPE_HOST={{ frappe_host }}
+Environment=GRAFANA_HOST={{ grafana_host }}
+Environment=QUICKWIT_HOST={{ private_ip }}
 
 [Service]
 Restart=always
