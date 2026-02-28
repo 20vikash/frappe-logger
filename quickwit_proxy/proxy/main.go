@@ -105,6 +105,7 @@ func fetchLogUser(jwtToken string, email string) (map[string]any, error) {
 
 	requestBody := map[string]string{
 		"jwt_token": jwtToken,
+		"jwks_url":  JWKS_URL,
 	}
 
 	bodyBytes, err := json.Marshal(requestBody)
