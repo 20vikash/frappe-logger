@@ -15,7 +15,8 @@ def verify_jwt(token_string: str):
             algorithms=["ES256"],
             options={
                 "verify_aud": False,
-            }
+            },
+            leeway=300
         )
 
         return decoded
