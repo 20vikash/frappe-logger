@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -278,6 +279,15 @@ func main() {
 		if !ok {
 			http.Error(w, "Email missing", http.StatusUnauthorized)
 			return
+		}
+
+		blockedPaths := []string{"/ui"}
+		for _, path := range blockedPaths {
+			if strings.Contains(r.URL.Path, path) {
+				http.Error(w, "Forbidden: Path is blocked", http.StatusForbidden)
+				fmt.Printf("Blocked access to: %s\n", r.URL.Path)
+				return
+			}
 		}
 
 		logUserData, err := fetchLogUser(token, email)
