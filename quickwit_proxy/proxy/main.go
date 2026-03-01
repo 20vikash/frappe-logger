@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"github.com/MicahParks/keyfunc/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -59,6 +61,41 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return val
+}
+
+func validateBasicAuth(r *http.Request) bool {
+
+	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		return false
+	}
+
+	if !strings.HasPrefix(auth, "Basic ") {
+		return false
+	}
+
+	payload, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
+	if err != nil {
+		return false
+	}
+
+	parts := strings.SplitN(string(payload), ":", 2)
+	if len(parts) != 2 {
+		return false
+	}
+
+	username := parts[0]
+	password := parts[1]
+
+	expectedUser := os.Getenv("QUICKWIT_ADMIN_USERNAME")
+	expectedHash := os.Getenv("QUICKWIT_ADMIN_HASHED_PASSWORD")
+
+	if username != expectedUser {
+		return false
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(expectedHash), []byte(password))
+	return err == nil
 }
 
 func initJWKS() {
@@ -263,9 +300,17 @@ func main() {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		if validateBasicAuth(r) {
+			proxy.ServeHTTP(w, r)
+			return
+		}
+
 		token := r.Header.Get("X-Grafana-Id")
 		if token == "" {
-			http.Error(w, "Missing token", http.StatusUnauthorized)
+			log.Println("Missing token")
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"ok","authenticated":false}`))
 			return
 		}
 
@@ -284,8 +329,7 @@ func main() {
 		blockedPaths := []string{"/ui"}
 		for _, path := range blockedPaths {
 			if strings.Contains(r.URL.Path, path) {
-				http.Error(w, "Forbidden: Path is blocked", http.StatusForbidden)
-				fmt.Printf("Blocked access to: %s\n", r.URL.Path)
+				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 		}
