@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	QUICKWIT_BASE_URL = fmt.Sprintf("http://%s:7280", os.Getenv("QUICKWIT_HOST"))
+	QUICKWIT_BASE_URL = "http://localhost:7280"
 	FRAPPE_BASE_URL   = fmt.Sprintf("https://%s", os.Getenv("FRAPPE_HOST"))
 
 	BIND_PORT = getEnv("PROXY_BIND_PORT", "8080")
